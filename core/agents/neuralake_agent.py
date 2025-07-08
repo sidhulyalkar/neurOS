@@ -1,7 +1,7 @@
 # agents/neuralake_agent.py
 
-from agents.base_agent import Agent
-from neuralake.core import Catalog
+from core.agents.base_agent import Agent
+from datarepo.core import Catalog
 
 class NeuralakeAgent(Agent):
     """Agent to query, materialize, and manage Neuralake tables and catalogs."""

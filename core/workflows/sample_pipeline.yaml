@@ -1,0 +1,22 @@
+# workflows/sample_pipeline.yaml
+pipeline:
+  sensors:
+    type: EEG
+    channels: [C3, C4, Cz]
+  preprocessing:
+    filter:
+      type: bandpass
+      low: 1
+      high: 40
+  hardware_spec_path: hardware_profiles/openbci_cyton.yaml
+  model:
+    type: CNN
+    layers:
+      - conv:
+          filters: 16
+          kernel: 3
+      - dense:
+          units: 64
+  output:
+    type: classification
+    classes: [left, right]

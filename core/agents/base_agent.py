@@ -1,7 +1,7 @@
 # agents/base_agent.py
 import logging
 from openai import OpenAI
-from neuralake.core import Catalog
+from datarepo.core import Catalog
 
 
 class Agent:

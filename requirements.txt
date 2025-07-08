@@ -11,7 +11,8 @@ plotly >= 6.1.2
 coverage >= 7.9.1
 matplotlib >= 3.10.3
 scikit-learn >= 1.7.0
-neuralake >= 0.0.5
+data-repository >= 0.0.5
 deltalake >= 0.25.4
 polars >= 1.9.0
 streamlit-aggrid >= 1.1.6
+click

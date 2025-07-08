@@ -1,6 +1,6 @@
 import yaml
 import json
-from agents.base_agent import Agent
+from core.agents.base_agent import Agent
 
 
 class SpecAgent(Agent):
@@ -16,9 +16,17 @@ class SpecAgent(Agent):
             catalog=None, model_name=model_name, temperature=temperature, client=client
         )
 
-    def load_spec(self, yaml_file: str) -> dict:
-        with open(yaml_file, "r") as f:
-            return yaml.safe_load(f)
+    def load_spec(self, config: dict) -> dict:        
+        # The spec agent should operate on the part of the config
+        # that defines the hardware, not load a file itself.
+        # This assumes the hardware spec path is under a 'hardware_spec' key.
+        hardware_spec_path = config.get("hardware_spec")
+        if not hardware_spec_path:
+            raise ValueError("Hardware specification path not found in the workflow config.")
+        with open(hardware_spec_path, "r") as f:
+            spec = yaml.safe_load(f)
+        return spec
+
 
     def generate_pipeline_spec(self, spec_data: dict) -> dict:
         # Build messages for LLM

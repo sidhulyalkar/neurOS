@@ -15,8 +15,8 @@ import plotly.express as px
 import polars as pl
 import pyarrow.parquet as pq
 
-from agents.spec_agent import SpecAgent
-from agents.code_agent import CodeAgent
+from core.agents.spec_agent import SpecAgent
+from core.agents.code_agent import CodeAgent
 from pipeline import run_full_pipeline
 
 from middleware.preprocessing.preprocessing import run as preprocess

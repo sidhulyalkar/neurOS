@@ -3,7 +3,7 @@ import os
 import sys
 import pyarrow as pa
 import polars as pl
-from neuralake.core import Catalog, ModuleDatabase, ParquetTable, table
+from datarepo.core import Catalog, ModuleDatabase, ParquetTable, table
 
 DATA_LAKE_URI = os.environ.get("DATA_LAKE_URI", "./mock_data")
 
