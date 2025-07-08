@@ -1,12 +1,17 @@
-# interfaces/cli.py
+# middleware/interfaces/cli.py
 import click
-from core.orchestrator.main import main
+import asyncio
+from orchestrator.main import main_async
 
 @click.command()
-@click.option("--workflow", default="workflows/sample_pipeline.yaml", help="Path to workflow YAML")
+@click.option(
+    '--workflow',
+    default='workflows/sample_workflow.yaml',
+    help='Path to workflow YAML'
+)
 def cli(workflow):
     """CLI for neurOS orchestrator."""
-    main(workflow)
+    asyncio.run(main_async(workflow))
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     cli()
