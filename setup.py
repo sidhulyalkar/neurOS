@@ -1,40 +1,32 @@
-# setup.py
 from setuptools import setup, find_packages
 
-# Merge existing NeuroForge requirements: e.g., numpy, scipy, pandas, mne, scikit-learn, etc.
-requirements = [
-    "openai",
-    "pyyaml",
-    "numpy",
-    "pandas",
-    "scipy",
-    "streamlit",
-    "pytest",
-    "brainflow",
-    "fastapi",
-    "plotly", 
-    "coverage",
-    "matplotlib",
-    "scikit-learn",
-    "data-repository",
-    "deltalake",
-    "polars",
-    "streamlit-aggrid",
-    "click"
-]
+with open("README.md", "r", encoding="utf-8") as fh:
+    long_description = fh.read()
+
+with open("requirements.txt", "r", encoding="utf-8") as fh:
+    requirements = [line.strip() for line in fh if line.strip() and not line.startswith("#")]
 
 setup(
-    name="neurOS",
-    version="0.1.0",
+    name="neuros",
+    version="1.0.0",
+    author="neurOS Development Team",
+    author_email="team@neuros.dev",
+    description="The Operating System for Brain-Computer Interfaces",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     packages=find_packages(),
-    include_package_data=True,
-    install_requires=[
-        *requirements,
-    ],
+    python_requires=">=3.10",
+    install_requires=requirements,
     entry_points={
         "console_scripts": [
-            "neuros=middleware.interfaces.cli:cli",
-            "neuros-orchestrator=core.orchestrator.main:main",
+            "neuros=neuros.cli:main",
         ],
     },
+    classifiers=[
+        "Development Status :: 4 - Beta",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+    ],
 )
