@@ -1,10 +1,11 @@
 # orchestrator/main.py
 import asyncio
 import yaml
-from agents.DeviceAgent import DeviceAgent
 from core.signals.pipeline import ProcessingGraph
-from agents.RunAgent import RunAgent
-from agents.EvalAgent import EvalAgent
+from agents.device_agent import DeviceAgent
+from agents.run_agent import RunAgent
+from agents.eval_agent import EvalAgent
+
 
 
 def load_workflow(path: str) -> dict:
