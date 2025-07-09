@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  neuros-app:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile
+    container_name: neuros-app
+    ports:
+      - "8000:8000"
+    environment:
+      - NEUROS_ENV=production
+    restart: unless-stopped
+
+  neuros-dashboard:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile
+    container_name: neuros-dashboard
+    ports:
+      - "8501:8501"
+    environment:
+      - NEUROS_ENV=production
+    command: ["streamlit", "run", "frontend/enhanced_dashboard.py", "--server.port=8501", "--server.address=0.0.0.0"]
+    restart: unless-stopped
