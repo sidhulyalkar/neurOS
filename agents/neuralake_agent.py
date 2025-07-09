@@ -1,6 +1,6 @@
 # agents/neuralake_agent.py
 
-from core.agents.base_agent import Agent
+from agents.base_agent import Agent
 from datarepo.core import Catalog
 
 class NeuralakeAgent(Agent):

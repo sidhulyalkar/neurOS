@@ -1,5 +1,8 @@
 # agents/run_agent.py
-from .. import pipeline 
+from core.pipeline.pipeline import run_full_pipeline
+from agents.feature_agent import FeatureAgent
+from agents.train_agent import TrainAgent
+from agents.inference_agent import InferenceAgent
 
 class RunAgent:
     def run(self, workflow_path: str):

@@ -1,6 +1,6 @@
 import yaml
 import json
-from core.agents.base_agent import Agent
+from agents.base_agent import Agent
 
 
 class SpecAgent(Agent):

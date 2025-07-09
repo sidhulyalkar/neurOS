@@ -1,6 +1,6 @@
 # agents/code_agent.py
 
-from core.agents.base_agent import Agent
+from agents.base_agent import Agent
 import json
 
 
