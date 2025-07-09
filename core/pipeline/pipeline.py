@@ -1,7 +1,7 @@
 # pipeline.py
 import numpy as np
 import yaml
-from core.agents.spec_agent import SpecAgent
+from agents.spec_agent import SpecAgent
 from middleware.io.signal_shape import run as validate_shape
 from middleware.preprocessing.preprocessing import run as preprocess
 from middleware.features.features import run as extract_features

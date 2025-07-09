@@ -1,6 +1,6 @@
 # core/kernel/device_driver.py
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Any, Dict, List, Callable, Optional
 import asyncio
@@ -31,7 +31,6 @@ class SignalQuality:
 class BCIDevice(ABC):
     """
     Abstract base class for all BCI hardware devices.
-    Provides event-driven data streaming and lifecycle management.
     """
     def __init__(
         self,
@@ -50,32 +49,26 @@ class BCIDevice(ABC):
 
     @abstractmethod
     async def initialize(self) -> DeviceInfo:
-        """Initialize connection and return device info."""
         pass
 
     @abstractmethod
     async def start_acquisition(self) -> None:
-        """Begin streaming data asynchronously."""
         pass
 
     @abstractmethod
     async def stop_acquisition(self) -> None:
-        """Stop streaming data."""
         pass
 
     @abstractmethod
     async def get_signal_quality(self) -> SignalQuality:
-        """Return current signal quality metrics."""
         pass
 
     def on(self, event_type: str, callback: Callable[[Any], None]) -> None:
-        """Register a callback for events: 'data', 'quality', 'error', etc."""
         if event_type not in self._callbacks:
             self._callbacks[event_type] = []
         self._callbacks[event_type].append(callback)
 
     def _emit(self, event_type: str, payload: Any) -> None:
-        """Emit an event to all registered listeners."""
         for cb in self._callbacks.get(event_type, []):
             try:
                 if asyncio.iscoroutinefunction(cb):
@@ -83,5 +76,4 @@ class BCIDevice(ABC):
                 else:
                     cb(payload)
             except Exception as e:
-                # emit error event
                 self._emit('error', e)
