@@ -29,7 +29,7 @@ else:
 
 setup(
     name="neuros",
-    version="1.0.1",
+    version="1.0.2",
     author="Sidharth Hulyalkar",
     author_email="sidsoccer21@gmail.com",
     project_url="https://github.com/sidhulyalkar/neurOS",

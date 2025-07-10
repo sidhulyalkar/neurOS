@@ -686,9 +686,72 @@ def export_logs(output, days):
     
     click.echo(f"✅ Logs exported to {output}")
 
+@cli.command()
+def hello():
+    """Say hello from neurOS"""
+    try:
+        import neuros
+        click.echo(neuros.hello_neuros())
+    except ImportError:
+        click.echo("🧠 Hello from neurOS! (Module not fully installed)")
+
+@cli.group()
+def deploy():
+    """Deployment management commands"""
+    pass
+
+@deploy.command()
+@click.option('--environment', type=click.Choice(['development', 'staging', 'production']), required=True)
+@click.option('--name', help='Deployment name')
+@click.option('--build/--no-build', default=True, help='Build images before deployment')
+def create(environment, name, build):
+    """Deploy neurOS to specified environment"""
+    click.echo(f"🚀 Deploying to {environment}...")
+    click.echo("⚠️  Note: This is a simulation. Full deployment requires Kubernetes setup.")
+    
+    # Simulate deployment steps
+    steps = [
+        "Building Docker images...",
+        "Generating Kubernetes manifests...",
+        "Applying configurations...",
+        "Starting services...",
+        "Verifying deployment..."
+    ]
+    
+    import time
+    for step in steps:
+        click.echo(f"  {step}")
+        time.sleep(0.5)
+    
+    click.echo(f"✅ Simulated deployment to {environment} completed!")
+
+@deploy.command()
+@click.option('--namespace', default='neuros-enterprise')
+def status(namespace):
+    """Get deployment status"""
+    click.echo(f"📊 Deployment Status (simulated)")
+    click.echo(f"Namespace: {namespace}")
+    click.echo("Services:")
+    
+    # Mock service status
+    services = [
+        ("processing-engine", "2/2", "running"),
+        ("dashboard", "1/1", "running"),
+        ("ai-agents", "1/1", "running"),
+        ("hardware-interface", "1/1", "running")
+    ]
+    
+    for service, replicas, status in services:
+        click.echo(f"  ✅ {service}: {replicas} ready ({status})")
+
+# Add to the end of your commands.py file, in the main() function:
 def main():
     """Main CLI entry point"""
-    cli()
+    try:
+        cli()
+    except Exception as e:
+        click.echo(f"❌ Error: {e}")
+        sys.exit(1)
 
 if __name__ == '__main__':
     main()
