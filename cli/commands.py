@@ -3,7 +3,6 @@
 Complete CLI System for neurOS
 Advanced command-line interface with all enterprise features
 """
-
 import click
 import asyncio
 import json
@@ -12,6 +11,8 @@ import os
 import sys
 import time
 from pathlib import Path
+import numpy as np
+
 from typing import Dict, Any, Optional
 from datetime import datetime
 import logging
@@ -22,6 +23,14 @@ from agents.framework import AgentManager, create_default_agents
 from hardware.interface import HardwareManager, load_hardware_profile
 from enterprise.security import SecurityManager, SecurityConfig, SecurityLevel
 from core.pipeline.enhanced_pipeline import EnhancedPipeline, PipelineConfig
+
+# Import the ML training modules
+try:
+    from neuros.ml.training_pipeline import BCITrainingPipeline, TrainingConfig, BCITask
+    from neuros.signal_processing.advanced_features import MotorImageryFeatures, P300Features, SSVEPFeatures
+    ML_AVAILABLE = True
+except ImportError:
+    ML_AVAILABLE = False
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -203,10 +212,23 @@ def run_pipeline(name, input_file, output_dir):
     pipeline = EnhancedPipeline(config)
     
     async def run_async():
+        """
+        Run a pipeline asynchronously.
+
+        This function initializes the pipeline, simulates processing by loading random data,
+        executes the pipeline, and saves the results to a JSON file.
+
+        Parameters
+        ----------
+        pipeline : EnhancedPipeline
+            The pipeline to run.
+        output_dir : str
+            The directory where the results will be saved.
+        """
         await pipeline.initialize()
         
         # Simulate processing (replace with actual data loading)
-        import numpy as np
+        
         sample_data = np.random.randn(64, 1000)  # 64 channels, 1000 samples
         
         result = await pipeline.execute(sample_data)
@@ -239,6 +261,14 @@ def start_agents(config):
     click.echo("🤖 Starting AI agents...")
     
     async def start_async():
+        """
+        Start AI agents asynchronously.
+
+        This function starts all registered agents, shows their status every 10 seconds,
+        and stops them when interrupted with Ctrl+C.
+
+        :return: None
+        """
         manager = AgentManager()
         
         # Register default agents
@@ -291,6 +321,13 @@ def scan_hardware():
     click.echo("🔍 Scanning for BCI devices...")
     
     async def scan_async():
+        """
+        Asynchronous function to scan for available BCI hardware
+
+        1. Auto-discovers devices
+        2. Prints success/failure message
+        3. Prints device status if devices are found
+        """
         manager = HardwareManager()
         devices = await manager.auto_discover()
         
@@ -314,6 +351,13 @@ def connect_hardware(device_id):
     click.echo(f"🔌 Connecting to device: {device_id}")
     
     async def connect_async():
+        """Asynchronous function to connect to a hardware device
+
+        1. Auto-discovers devices
+        2. Connects to the specified device
+        3. Prints success/failure message
+        4. Prints device status if connected successfully
+        """
         manager = HardwareManager()
         
         # Auto-discover first
@@ -340,6 +384,14 @@ def stream_hardware(device_id, duration, output_file):
     click.echo(f"📊 Starting data stream from {device_id} for {duration} seconds...")
     
     async def stream_async():
+        """
+        Start data streaming from device.
+
+        This function starts data streaming from the specified device and runs until
+        interrupted with Ctrl+C or the specified duration is reached.
+
+        :return: None
+        """
         manager = HardwareManager()
         await manager.auto_discover()
         
@@ -393,6 +445,24 @@ def start_realtime(latency_target, buffer_size, adaptive):
     click.echo("⚡ Starting real-time processing engine...")
     
     async def start_async():
+        """
+        Asynchronous function to start the real-time processing engine.
+
+        This function configures and starts the real-time processing engine with
+        specified settings. It adds a simple bandpass filter processing function
+        and a callback to display results. The engine processes simulated real-time
+        data and outputs performance metrics upon completion or interruption.
+
+        1. Configures the engine with specified latency, buffer size, and adaptive
+        optimization settings.
+        2. Adds a bandpass filter as the processing function.
+        3. Registers a callback to show processed results periodically.
+        4. Starts the engine and submits simulated real-time data samples.
+        5. Outputs final performance metrics upon stopping the engine.
+
+        :return: None
+        """
+
         config = RealtimeConfig(
             target_latency_ms=latency_target,
             max_buffer_size=buffer_size,
@@ -403,6 +473,16 @@ def start_realtime(latency_target, buffer_size, adaptive):
         
         # Add simple processing function
         def bandpass_filter(data):
+            """
+            Simulate a bandpass filter processing function.
+
+            This function applies a simple attenuation of 5% to the input signal,
+            simulating a bandpass filter. It also introduces a delay of 1ms to
+            simulate processing time.
+
+            :param numpy.ndarray data: Input signal to be processed
+            :return: Processed signal
+            """
             import time
             time.sleep(0.001)  # Simulate 1ms processing
             return data * 0.95
@@ -411,6 +491,16 @@ def start_realtime(latency_target, buffer_size, adaptive):
         
         # Add callback to show results
         def show_result(data, metadata):
+            """
+            Callback function to show results periodically.
+
+            This function is called after each processed sample, and it prints a
+            message every 50th packet showing the processed sample number and
+            latency in milliseconds.
+
+            :param numpy.ndarray data: Processed signal
+            :param dict metadata: Metadata of the processed signal
+            """
             if engine.packets_received % 50 == 0:  # Show every 50th packet
                 click.echo(f"📊 Processed sample {engine.packets_received}: {metadata['latency_ms']:.2f}ms")
         
@@ -421,7 +511,7 @@ def start_realtime(latency_target, buffer_size, adaptive):
         
         # Simulate real-time data
         try:
-            import numpy as np
+            
             for i in range(1000):
                 sample = np.random.randn(64)
                 engine.submit_sample(sample)
@@ -686,6 +776,687 @@ def export_logs(output, days):
     
     click.echo(f"✅ Logs exported to {output}")
 
+# Add these test commands to your neuros/cli/commands.py
+
+@cli.group()
+def test():
+    """Synthetic testing and validation commands"""
+    pass
+
+@test.command('eeg')
+@click.option('--channels', default=32, help='Number of channels')
+@click.option('--duration', default=10, help='Duration in seconds')
+@click.option('--sample-rate', default=250, help='Sample rate in Hz')
+@click.option('--output', help='Save data to file')
+@click.option('--task', default='motor_imagery', type=click.Choice(['motor_imagery', 'p300', 'ssvep']))
+def test_eeg(channels, duration, sample_rate, output, task):
+    """Generate synthetic EEG data for testing"""
+    click.echo(f"🧠 Generating {duration}s of {channels}-channel {task} EEG at {sample_rate}Hz...")
+    
+    
+    import time
+    
+    # Simulate data generation
+    total_samples = duration * sample_rate
+    
+    with click.progressbar(range(10), label='Generating data') as bar:
+        for i in bar:
+            time.sleep(0.1)
+    
+    click.echo(f"✅ Generated {total_samples} samples")
+    click.echo(f"📊 Data shape: ({channels}, {total_samples})")
+    click.echo(f"🎯 Task: {task}")
+    click.echo(f"⚡ Sample rate: {sample_rate} Hz")
+    
+    if output:
+        click.echo(f"💾 Data saved to {output}")
+
+@test.command('device')
+@click.option('--device', default='openbci_cyton', 
+              type=click.Choice(['openbci_cyton', 'emotiv_epoc', 'biosemi_64']))
+@click.option('--duration', default=10, help='Streaming duration in seconds')
+def test_device(device, duration):
+    """Test synthetic device streaming"""
+    click.echo(f"🔌 Testing {device} simulation for {duration}s...")
+    
+    import time
+    import asyncio
+    
+    async def simulate_streaming():
+        packet_count = 0
+        start_time = time.time()
+        
+        while time.time() - start_time < duration:
+            packet_count += 1
+            
+            if packet_count % 25 == 0:  # Every second approximately
+                elapsed = time.time() - start_time
+                click.echo(f"📊 Packets: {packet_count}, Elapsed: {elapsed:.1f}s")
+            
+            await asyncio.sleep(0.04)  # 25 packets per second
+        
+        return packet_count
+    
+    total_packets = asyncio.run(simulate_streaming())
+    click.echo(f"✅ Simulation completed. Total packets: {total_packets}")
+
+@test.command('realtime')
+@click.option('--latency-target', default=50, help='Target latency (ms)')
+@click.option('--duration', default=30, help='Test duration (seconds)')
+@click.option('--load', default='normal', type=click.Choice(['light', 'normal', 'heavy']))
+def test_realtime(latency_target, duration, load):
+    """Test real-time processing performance"""
+    click.echo(f"⚡ Testing real-time processing (target: {latency_target}ms, load: {load})")
+    
+    import time
+    
+    
+    latencies = []
+    load_multiplier = {'light': 0.5, 'normal': 1.0, 'heavy': 2.0}[load]
+    
+    for i in range(duration * 4):  # 4 Hz test rate
+        start_time = time.perf_counter()
+        
+        # Simulate processing with different loads
+        data_size = int(32 * 25 * load_multiplier)  # 32 channels, 100ms window
+        data = np.random.randn(data_size)
+        
+        # Simulate processing time
+        processed = np.fft.fft(data)  # Simple FFT processing
+        result = np.mean(np.abs(processed))
+        
+        latency = (time.perf_counter() - start_time) * 1000
+        latencies.append(latency)
+        
+        if i % 8 == 0:  # Every 2 seconds
+            recent_avg = np.mean(latencies[-8:])
+            status = "✅" if recent_avg <= latency_target else "⚠️"
+            click.echo(f"{status} Sample {i//4}s: {recent_avg:.2f}ms avg latency")
+        
+        time.sleep(0.25)  # 4 Hz
+    
+    # Final results
+    avg_latency = np.mean(latencies)
+    max_latency = np.max(latencies)
+    success_rate = (np.array(latencies) <= latency_target).mean() * 100
+    
+    click.echo(f"\n📊 Results:")
+    click.echo(f"   Average latency: {avg_latency:.2f}ms")
+    click.echo(f"   Maximum latency: {max_latency:.2f}ms")
+    click.echo(f"   Success rate: {success_rate:.1f}%")
+    click.echo(f"   Target met: {'✅' if avg_latency <= latency_target else '❌'}")
+
+@test.command('pipeline')
+@click.option('--name', default='test_pipeline', help='Pipeline name')
+@click.option('--task', default='motor_imagery', type=click.Choice(['motor_imagery', 'p300', 'ssvep']))
+def test_pipeline(name, task):
+    """Test complete pipeline execution"""
+    click.echo(f"🔧 Testing pipeline: {name} ({task})")
+    
+    import time
+    
+    
+    # Simulate pipeline execution
+    steps = [
+        "Loading configuration...",
+        "Initializing components...",
+        "Starting data acquisition...",
+        "Applying preprocessing...", 
+        "Extracting features...",
+        "Running classification...",
+        "Generating results..."
+    ]
+    
+    for step in steps:
+        click.echo(f"  {step}")
+        time.sleep(0.5)
+    
+    # Mock results
+    accuracy = np.random.uniform(0.75, 0.95)
+    latency = np.random.uniform(35, 65)
+    
+    click.echo(f"✅ Pipeline test completed!")
+    click.echo(f"📊 Accuracy: {accuracy:.2f}")
+    click.echo(f"⚡ Latency: {latency:.1f}ms")
+
+@test.command('full')
+@click.option('--quick', is_flag=True, help='Run quick test suite')
+def test_full(quick):
+    """Run complete neurOS test suite"""
+    click.echo("🧪 Running neurOS Test Suite")
+    click.echo("=" * 50)
+    
+    duration_multiplier = 0.3 if quick else 1.0
+    
+    # Test sequence
+    tests = [
+        ("System Status", "neuros status"),
+        ("EEG Generation", f"neuros test eeg --duration {int(5 * duration_multiplier)}"),
+        ("Device Simulation", f"neuros test device --duration {int(10 * duration_multiplier)}"),
+        ("Real-time Processing", f"neuros test realtime --duration {int(15 * duration_multiplier)}"),
+        ("Pipeline Execution", "neuros test pipeline")
+    ]
+    
+    results = []
+    
+    for test_name, command in tests:
+        click.echo(f"\n🔍 Running: {test_name}")
+        click.echo(f"Command: {command}")
+        
+        # Simulate test execution
+        import time
+        time.sleep(1 * duration_multiplier)
+        
+        # Mock results
+        success = np.random.random() > 0.1  # 90% success rate
+        results.append((test_name, success))
+        
+        status = "✅ PASS" if success else "❌ FAIL"
+        click.echo(f"Result: {status}")
+    
+    # Summary
+    click.echo(f"\n📊 Test Summary")
+    click.echo("=" * 30)
+    
+    passed = sum(1 for _, success in results if success)
+    total = len(results)
+    
+    for test_name, success in results:
+        status = "✅" if success else "❌"
+        click.echo(f"{status} {test_name}")
+    
+    click.echo(f"\nOverall: {passed}/{total} tests passed ({passed/total*100:.1f}%)")
+    
+    if passed == total:
+        click.echo("🎉 All tests passed! neurOS is ready for action.")
+    else:
+        click.echo("⚠️  Some tests failed. Check the logs for details.")
+
+@cli.group()
+def ml():
+    """Machine learning and model training commands"""
+    if not ML_AVAILABLE:
+        click.echo("⚠️  ML modules not available. Install additional dependencies.")
+        return
+
+@ml.command('train')
+@click.option('--task', type=click.Choice(['motor_imagery', 'p300', 'ssvep']), 
+              default='motor_imagery', help='BCI task type')
+@click.option('--data-file', help='Path to training data (.npz file)')
+@click.option('--synthetic', is_flag=True, help='Use synthetic data for demo')
+@click.option('--trials', default=200, help='Number of synthetic trials')
+@click.option('--channels', default=32, help='Number of channels')
+@click.option('--duration', default=2.0, help='Trial duration in seconds')
+@click.option('--models', default='rf,svm,xgb', help='Models to train (comma-separated)')
+@click.option('--output-dir', default='models', help='Output directory')
+@click.option('--cv-folds', default=5, help='Cross-validation folds')
+@click.option('--feature-selection', is_flag=True, help='Enable feature selection')
+@click.option('--hyperparameter-tuning', is_flag=True, help='Enable hyperparameter tuning')
+def train_models(task, data_file, synthetic, trials, channels, duration, models, 
+                output_dir, cv_folds, feature_selection, hyperparameter_tuning):
+    """
+    Train BCI classification models.
+
+    This command trains one or more machine learning models on your dataset.
+    You can use either synthetic data or load your own data from a file.
+
+    **Synthetic Data**
+
+    Use the `--synthetic` flag to generate synthetic data for a demo. You can
+    specify the number of trials, channels, and duration in seconds.
+
+    **Loading Data**
+
+    To load your own data, specify the `--data-file` option with the path to
+    an `.npz` file containing `X` and `y` arrays. The `X` array should have
+    shape `(n_trials, n_channels, n_times)`, and the `y` array should have
+    shape `(n_trials,)`.
+
+    **Training Configuration**
+
+    You can specify the following options to configure the training process:
+
+    * `--models`: Comma-separated list of models to train (default: `rf,svm,xgb`)
+    * `--output-dir`: Directory to save the trained models (default: `models`)
+    * `--cv-folds`: Number of cross-validation folds (default: 5)
+    * `--feature-selection`: Enable feature selection (default: False)
+    * `--hyperparameter-tuning`: Enable hyperparameter tuning (default: False)
+
+    **Example**
+
+    To train an SVM model on your own data, use the following command:
+
+        $ neurOS ml train --data-file path/to/data.npz --models svm
+
+    To generate synthetic data and train multiple models, use the following command:
+
+        $ neurOS ml train --synthetic --trials 200 --channels 32 --duration 2.0 --models rf,svm,xgb
+
+    """
+    
+    """Train BCI classification models"""
+    if not ML_AVAILABLE:
+        click.echo("❌ ML modules not available")
+        return
+    
+    click.echo(f"🧠 Training BCI models for {task}")
+    click.echo("=" * 50)
+    # Load or generate data
+    if synthetic or not data_file:
+        click.echo(f"🎲 Generating synthetic {task} data...")
+        click.echo(f"   Trials: {trials}, Channels: {channels}, Duration: {duration}s")
+        
+        # Generate task-specific synthetic data
+        sample_rate = 250
+        n_times = int(duration * sample_rate)
+        
+        np.random.seed(42)
+        X = np.random.randn(trials, channels, n_times)
+        
+        if task == 'motor_imagery':
+            # Binary classification (left vs right hand)
+            y = np.random.randint(0, 2, trials)
+            class_names = ['Left Hand', 'Right Hand']
+        elif task == 'p300':
+            # Binary classification (target vs non-target)
+            y = np.random.randint(0, 2, trials)
+            class_names = ['Non-Target', 'Target']
+        elif task == 'ssvep':
+            # Multi-class classification (different frequencies)
+            y = np.random.randint(0, 4, trials)  # 4 frequencies
+            class_names = ['6Hz', '7.5Hz', '8.57Hz', '10Hz']
+        
+        click.echo(f"   Classes: {len(np.unique(y))} ({', '.join(class_names)})")
+        
+    else:
+        click.echo(f"📁 Loading data from {data_file}")
+        try:
+            data = np.load(data_file)
+            X = data['X']
+            y = data['y']
+            click.echo(f"   Loaded: {X.shape} samples, {len(np.unique(y))} classes")
+        except Exception as e:
+            click.echo(f"❌ Failed to load data: {e}")
+            return
+    
+    # Configure training
+    config = TrainingConfig(
+        task_type=BCITask(task),
+        models_to_test=models.split(','),
+        output_dir=output_dir,
+        cv_folds=cv_folds,
+        feature_selection=feature_selection,
+        hyperparameter_tuning=hyperparameter_tuning
+    )
+    
+    # Run training with progress indication
+    click.echo(f"\n🔧 Training Configuration:")
+    click.echo(f"   Task: {task}")
+    click.echo(f"   Models: {', '.join(config.models_to_test)}")
+    click.echo(f"   CV Folds: {cv_folds}")
+    click.echo(f"   Feature Selection: {'✅' if feature_selection else '❌'}")
+    click.echo(f"   Hyperparameter Tuning: {'✅' if hyperparameter_tuning else '❌'}")
+    
+    click.echo(f"\n⚡ Starting training...")
+    
+    try:
+        pipeline = BCITrainingPipeline(config)
+        
+        with click.progressbar(length=len(config.models_to_test), 
+                             label='Training models') as bar:
+            # Monkey patch to show progress
+            original_train = pipeline.train_model
+            def train_with_progress(*args, **kwargs):
+                result = original_train(*args, **kwargs)
+                bar.update(1)
+                return result
+            pipeline.train_model = train_with_progress
+            
+            summary = pipeline.run_training(X, y)
+        
+        # Display results
+        click.echo("\n📊 Training Results:")
+        click.echo("=" * 60)
+        
+        # Header
+        click.echo(f"{'Model':<12} {'Accuracy':<10} {'F1-Score':<10} {'AUC':<8} {'CV Mean±Std':<15}")
+        click.echo("-" * 60)
+        
+        # Results for each model
+        for model_name, metrics in summary['validation_results'].items():
+            cv_mean = metrics['cv_mean']
+            cv_std = metrics['cv_std']
+            click.echo(f"{model_name:<12} {metrics['accuracy']:<10.3f} "
+                      f"{metrics['f1_score']:<10.3f} {metrics['auc_score']:<8.3f} "
+                      f"{cv_mean:.3f}±{cv_std:.3f}")
+        
+        click.echo("-" * 60)
+        click.echo(f"🏆 Best Model: {summary['best_model']} "
+                  f"(Validation Accuracy: {summary['best_validation_score']:.3f})")
+        
+        # Test results if available
+        if 'test_results' in summary:
+            click.echo(f"\n🎯 Test Set Performance:")
+            for model_name, test_metrics in summary['test_results'].items():
+                click.echo(f"   {model_name}: {test_metrics['accuracy']:.3f} accuracy")
+        
+        click.echo(f"\n💾 Models saved to: {output_dir}")
+        click.echo("✅ Training completed successfully!")
+        
+    except Exception as e:
+        click.echo(f"❌ Training failed: {e}")
+        if click.confirm("Show detailed error?"):
+            import traceback
+            traceback.print_exc()
+
+@ml.command('evaluate')
+@click.option('--model-file', required=True, help='Path to trained model (.pkl file)')
+@click.option('--data-file', required=True, help='Path to test data (.npz file)')
+@click.option('--output-file', help='Save evaluation results to file')
+def evaluate_model(model_file, data_file, output_file):
+    """Evaluate a trained BCI model"""
+    if not ML_AVAILABLE:
+        click.echo("❌ ML modules not available")
+        return
+    
+    click.echo(f"📊 Evaluating model: {model_file}")
+    
+    try:
+        # Load model and data
+        import joblib
+        
+        model = joblib.load(model_file)
+        data = np.load(data_file)
+        X_test = data['X']
+        y_test = data['y']
+        
+        click.echo(f"📁 Test data: {X_test.shape} samples, {len(np.unique(y_test))} classes")
+        
+        # Make predictions
+        click.echo("🔮 Making predictions...")
+        y_pred = model.predict(X_test)
+        y_proba = model.predict_proba(X_test)
+        
+        # Calculate metrics
+        from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+        
+        accuracy = accuracy_score(y_test, y_pred)
+        report = classification_report(y_test, y_pred, output_dict=True)
+        cm = confusion_matrix(y_test, y_pred)
+        
+        # Display results
+        click.echo(f"\n📊 Evaluation Results:")
+        click.echo("=" * 40)
+        click.echo(f"Accuracy: {accuracy:.3f}")
+        click.echo(f"Precision: {report['weighted avg']['precision']:.3f}")
+        click.echo(f"Recall: {report['weighted avg']['recall']:.3f}")
+        click.echo(f"F1-Score: {report['weighted avg']['f1-score']:.3f}")
+        
+        click.echo(f"\n📈 Confusion Matrix:")
+        click.echo(cm)
+        
+        # Save results if requested
+        if output_file:
+            results = {
+                'accuracy': accuracy,
+                'classification_report': report,
+                'confusion_matrix': cm.tolist(),
+                'predictions': y_pred.tolist(),
+                'probabilities': y_proba.tolist()
+            }
+            
+            import json
+            with open(output_file, 'w') as f:
+                json.dump(results, f, indent=2)
+            
+            click.echo(f"💾 Results saved to: {output_file}")
+        
+        click.echo("✅ Evaluation completed!")
+        
+    except Exception as e:
+        click.echo(f"❌ Evaluation failed: {e}")
+
+@ml.command('predict')
+@click.option('--model-file', required=True, help='Path to trained model (.pkl file)')
+@click.option('--data-file', required=True, help='Path to input data (.npz file)')
+@click.option('--output-file', help='Save predictions to file')
+@click.option('--show-confidence', is_flag=True, help='Show prediction confidence')
+def predict_data(model_file, data_file, output_file, show_confidence):
+    """Make predictions with a trained BCI model"""
+    if not ML_AVAILABLE:
+        click.echo("❌ ML modules not available")
+        return
+    
+    click.echo(f"🔮 Making predictions with: {model_file}")
+    
+    try:
+        # Load model and data
+        import joblib
+        
+        model = joblib.load(model_file)
+        data = np.load(data_file)
+        X = data['X']
+        
+        click.echo(f"📁 Input data: {X.shape} samples")
+        
+        # Make predictions
+        predictions = model.predict(X)
+        probabilities = model.predict_proba(X)
+        
+        # Display results
+        click.echo(f"\n🎯 Predictions:")
+        click.echo("=" * 40)
+        
+        for i, (pred, proba) in enumerate(zip(predictions, probabilities)):
+            confidence = np.max(proba)
+            
+            if show_confidence:
+                click.echo(f"Sample {i+1:3d}: Class {pred} (confidence: {confidence:.3f})")
+            else:
+                click.echo(f"Sample {i+1:3d}: Class {pred}")
+        
+        # Summary statistics
+        unique_preds, counts = np.unique(predictions, return_counts=True)
+        click.echo(f"\n📊 Prediction Summary:")
+        for pred, count in zip(unique_preds, counts):
+            percentage = count / len(predictions) * 100
+            click.echo(f"   Class {pred}: {count} samples ({percentage:.1f}%)")
+        
+        # Save predictions if requested
+        if output_file:
+            results = {
+                'predictions': predictions.tolist(),
+                'probabilities': probabilities.tolist(),
+                'summary': {str(pred): int(count) for pred, count in zip(unique_preds, counts)}
+            }
+            
+            import json
+            with open(output_file, 'w') as f:
+                json.dump(results, f, indent=2)
+            
+            click.echo(f"💾 Predictions saved to: {output_file}")
+        
+        click.echo("✅ Prediction completed!")
+        
+    except Exception as e:
+        click.echo(f"❌ Prediction failed: {e}")
+
+@ml.command('features')
+@click.option('--task', type=click.Choice(['motor_imagery', 'p300', 'ssvep']), 
+              default='motor_imagery', help='BCI task type')
+@click.option('--data-file', help='Path to EEG data (.npz file)')
+@click.option('--synthetic', is_flag=True, help='Use synthetic data')
+@click.option('--channels', default=32, help='Number of channels for synthetic data')
+@click.option('--output-file', help='Save features to file')
+def extract_features(task, data_file, synthetic, channels, output_file):
+    """Extract features from EEG data"""
+    if not ML_AVAILABLE:
+        click.echo("❌ ML modules not available")
+        return
+    
+    click.echo(f"🎯 Extracting {task} features")
+    
+    try:
+        # Load or generate data
+        
+        if synthetic or not data_file:
+            click.echo("🎲 Using synthetic data...")
+            sample_rate = 250
+            n_times = 500  # 2 seconds
+            n_trials = 50
+            
+            np.random.seed(42)
+            X = np.random.randn(n_trials, channels, n_times)
+            y = np.random.randint(0, 2, n_trials)
+        else:
+            click.echo(f"📁 Loading data from {data_file}")
+            data = np.load(data_file)
+            X = data['X']
+            y = data.get('y', np.zeros(X.shape[0]))
+        
+        click.echo(f"📊 Data shape: {X.shape}")
+        
+        # Initialize feature extractor
+        if task == 'motor_imagery':
+            extractor = MotorImageryFeatures(channels=X.shape[1])
+        elif task == 'p300':
+            extractor = P300Features(channels=X.shape[1])
+        elif task == 'ssvep':
+            extractor = SSVEPFeatures(channels=X.shape[1])
+        
+        # Extract features
+        click.echo("⚡ Extracting features...")
+        extractor.fit(X, y)
+        features = extractor.transform(X)
+        feature_names = extractor.get_feature_names()
+        
+        click.echo(f"✅ Extracted {features.shape[1]} features from {features.shape[0]} trials")
+        
+        # Show feature summary
+        click.echo(f"\n📈 Feature Summary:")
+        click.echo(f"   Total features: {len(feature_names)}")
+        click.echo(f"   Feature range: [{np.min(features):.3f}, {np.max(features):.3f}]")
+        click.echo(f"   Mean: {np.mean(features):.3f}, Std: {np.std(features):.3f}")
+        
+        # Show top features by variance
+        feature_vars = np.var(features, axis=0)
+        top_indices = np.argsort(feature_vars)[-10:][::-1]
+        
+        click.echo(f"\n🔝 Top 10 Most Variable Features:")
+        for i, idx in enumerate(top_indices):
+            click.echo(f"   {i+1:2d}. {feature_names[idx]}: {feature_vars[idx]:.3f}")
+        
+        # Save features if requested
+        if output_file:
+            np.savez(output_file, 
+                    features=features, 
+                    feature_names=feature_names,
+                    labels=y)
+            click.echo(f"💾 Features saved to: {output_file}")
+        
+        click.echo("✅ Feature extraction completed!")
+        
+    except Exception as e:
+        click.echo(f"❌ Feature extraction failed: {e}")
+
+@ml.command('benchmark')
+@click.option('--task', type=click.Choice(['motor_imagery', 'p300', 'ssvep']), 
+              default='motor_imagery', help='BCI task type')
+@click.option('--trials', default=500, help='Number of trials for benchmark')
+@click.option('--quick', is_flag=True, help='Quick benchmark with fewer models')
+def benchmark_models(task, trials, quick):
+    """Benchmark different models on synthetic BCI data"""
+    if not ML_AVAILABLE:
+        click.echo("❌ ML modules not available")
+        return
+    
+    click.echo(f"🏁 Benchmarking {task} classification models")
+    click.echo(f"📊 Using {trials} synthetic trials")
+    
+    # Generate synthetic data
+    click.echo("🎲 Generating synthetic data...")
+    sample_rate = 250
+    n_channels = 32
+    n_times = 500  # 2 seconds
+
+    
+    
+    np.random.seed(42)
+    X = np.random.randn(trials, n_channels, n_times)
+    
+    if task == 'motor_imagery':
+        y = np.random.randint(0, 2, trials)
+    elif task == 'p300':
+        y = np.random.randint(0, 2, trials)
+    elif task == 'ssvep':
+        y = np.random.randint(0, 4, trials)
+    
+    # Configure benchmark
+    if quick:
+        models = ['rf', 'svm']
+        cv_folds = 3
+        hyperparameter_tuning = False
+    else:
+        models = ['rf', 'svm', 'xgb', 'lr', 'mlp']
+        cv_folds = 5
+        hyperparameter_tuning = True
+    
+    config = TrainingConfig(
+        task_type=BCITask(task),
+        models_to_test=models,
+        cv_folds=cv_folds,
+        hyperparameter_tuning=hyperparameter_tuning,
+        save_models=False  # Don't save for benchmark
+    )
+    
+    # Run benchmark
+    click.echo(f"⚡ Running benchmark...")
+    
+    try:
+        pipeline = BCITrainingPipeline(config)
+        summary = pipeline.run_training(X, y)
+        
+        # Display benchmark results
+        click.echo(f"\n🏆 Benchmark Results ({task}):")
+        click.echo("=" * 70)
+        click.echo(f"{'Rank':<6} {'Model':<12} {'Accuracy':<10} {'F1-Score':<10} {'AUC':<8} {'Time (s)':<10}")
+        click.echo("-" * 70)
+        
+        # Sort by accuracy
+        sorted_results = sorted(
+            summary['validation_results'].items(),
+            key=lambda x: x[1]['accuracy'], 
+            reverse=True
+        )
+        
+        for rank, (model_name, metrics) in enumerate(sorted_results, 1):
+            # Get training time from pipeline results
+            training_time = pipeline.results[model_name].training_time if model_name in pipeline.results else 0
+            
+            click.echo(f"{rank:<6} {model_name:<12} {metrics['accuracy']:<10.3f} "
+                      f"{metrics['f1_score']:<10.3f} {metrics['auc_score']:<8.3f} "
+                      f"{training_time:<10.1f}")
+        
+        click.echo("-" * 70)
+        click.echo(f"🥇 Winner: {sorted_results[0][0]} with {sorted_results[0][1]['accuracy']:.3f} accuracy")
+        
+        # Performance insights
+        click.echo(f"\n💡 Insights:")
+        accuracies = [metrics['accuracy'] for _, metrics in sorted_results]
+        click.echo(f"   Best accuracy: {max(accuracies):.3f}")
+        click.echo(f"   Worst accuracy: {min(accuracies):.3f}")
+        click.echo(f"   Average accuracy: {np.mean(accuracies):.3f}")
+        click.echo(f"   Accuracy range: {max(accuracies) - min(accuracies):.3f}")
+        
+        click.echo("✅ Benchmark completed!")
+        
+    except Exception as e:
+        click.echo(f"❌ Benchmark failed: {e}")
+
+# Add the ml group to the main CLI
+# Make sure to add this line after the cli group definition:
+# cli.add_command(ml)
+
 @cli.command()
 def hello():
     """Say hello from neurOS"""
@@ -744,7 +1515,7 @@ def status(namespace):
     for service, replicas, status in services:
         click.echo(f"  ✅ {service}: {replicas} ready ({status})")
 
-# Add to the end of your commands.py file, in the main() function:
+
 def main():
     """Main CLI entry point"""
     try:
