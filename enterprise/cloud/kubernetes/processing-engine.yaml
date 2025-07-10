@@ -1,0 +1,135 @@
+# enterprise/cloud/kubernetes/processing-engine.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: neuros-processing-engine
+  namespace: neuros-enterprise
+  labels:
+    app.kubernetes.io/name: neuros
+    app.kubernetes.io/component: processing-engine
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: neuros
+      app.kubernetes.io/component: processing-engine
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: neuros
+        app.kubernetes.io/component: processing-engine
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: neuros-processing
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: processing-engine
+        image: neuros/processing-engine:latest
+        imagePullPolicy: Always
+        env:
+        - name: NEUROS_COMPONENT
+          value: "processing-engine"
+        envFrom:
+        - configMapRef:
+            name: neuros-config
+        - secretRef:
+            name: neuros-secrets
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        - containerPort: 8080
+          name: metrics
+          protocol: TCP
+        - containerPort: 9090
+          name: health
+          protocol: TCP
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+            nvidia.com/gpu: 1
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+            nvidia.com/gpu: 1
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 9090
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 9090
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /startup
+            port: 9090
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 30
+        volumeMounts:
+        - name: tmp-volume
+          mountPath: /tmp
+        - name: model-cache
+          mountPath: /app/models
+        - name: data-volume
+          mountPath: /app/data
+      nodeSelector:
+        node-type: gpu-enabled
+      tolerations:
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule
+      volumes:
+      - name: tmp-volume
+        emptyDir: {}
+      - name: model-cache
+        persistentVolumeClaim:
+          claimName: model-cache-pvc
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: processing-data-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: neuros-processing-service
+  namespace: neuros-enterprise
+  labels:
+    app.kubernetes.io/name: neuros
+    app.kubernetes.io/component: processing-engine
+spec:
+  selector:
+    app.kubernetes.io/name: neuros
+    app.kubernetes.io/component: processing-engine
+  ports:
+  - port: 8000
+    targetPort: 8000
+    name: http
+  - port: 8080
+    targetPort: 8080
+    name: metrics
+  type: ClusterIP
