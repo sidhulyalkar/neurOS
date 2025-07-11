@@ -2,6 +2,6 @@
 neurOS CLI Package
 """
 
-from .commands import main
+from .complete_commands import main
 
 __all__ = ['main']
