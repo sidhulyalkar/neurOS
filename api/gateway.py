@@ -25,10 +25,10 @@ import numpy as np
 from contextlib import asynccontextmanager
 
 # neurOS imports
-from ..core.pipeline.enhanced_pipeline import EnhancedPipeline, PipelineConfig
-from ..enterprise.security import SecurityManager, AuditLogger
-from ..core.plugins.plugin_system import PluginManager
-from ..agents.framework import AgentManager
+from core.pipeline.enhanced_pipeline import EnhancedPipeline, PipelineConfig
+from enterprise.security import SecurityManager, AuditLogger
+from core.plugins.plugin_system import PluginManager
+from agents.framework import AgentManager
 
 logger = logging.getLogger(__name__)
 
