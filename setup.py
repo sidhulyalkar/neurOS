@@ -152,7 +152,7 @@ setup(
     # Entry points for CLI
     entry_points={
         "console_scripts": [
-            "neuros=neuros.cli.main:main",
+            "neuros=cli.main:main",
         ],
     },
     
